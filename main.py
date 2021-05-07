@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import youtube_dl
 import os
+import random
 
 #client = discord.Client()
 client = commands.Bot(command_prefix="!")
@@ -60,6 +61,17 @@ async def list(ctx):
         say [arg]\t\t-print arg
         server\t\t\t -check information about server
         list\t\t\t\t   -print commands list
+        
+        music:
+        play
+        pause
+        stop
+        leave
+        
+        game:
+        tictactoe @[player1] @[player2]
+        place [number]
+        
         """
     await ctx.send(info)
 
@@ -86,6 +98,7 @@ async def server(ctx):
 
     await ctx.send(embed=embed)
 
+#MUSIC
 @client.command()
 async def play(ctx, url : str):
     music = os.path.isfile("song.mp3")
@@ -152,5 +165,131 @@ async def stop(ctx):
     voice.stop()
     await voice.disconnect()
 
+#TIC TAC TOE
+winCondition = [
+    [0,1,2],
+    [3,4,5],
+    [6,7,8],
+    [0,3,6],
+    [1,4,7],
+    [2,5,8],
+    [0,4,8],
+    [2,4,6]
+]
+
+finished = True
+turn = ""
+player1 = ""
+player2 = ""
+board = []
+score = 0
+
+@client.command()
+async def tictactoe(ctx, pl1 : discord.Member, pl2 : discord.Member):
+    global finished
+    global turn
+    global player1
+    global player2
+    global score
+
+    if finished:
+        global board
+        board = [
+            ":white_large_square:", ":white_large_square:", ":white_large_square:",
+            ":white_large_square:", ":white_large_square:", ":white_large_square:",
+            ":white_large_square:", ":white_large_square:", ":white_large_square:"
+        ]
+        turn = ""
+        finished = False;
+        score = 0;
+        player1 = pl1
+        player2 = pl2
+
+        board_line = ""
+        for x in range(len(board)):         #print board
+            if x==2 or x==5 or x==8:
+                board_line += " " + board[x]
+                await ctx.send(board_line)
+                board_line = ""
+            else:
+                board_line += " " + board[x]
+
+        StartNum = random.randint(1,2)
+        if StartNum == 1:
+            turn = player1
+            await ctx.send("Player <@" + str(player1.id) + "> has turn")
+        elif StartNum == 2:
+            turn = player2
+            await ctx.send("Player <@" + str(player2.id) + "> has turn")
+        else:
+            await ctx.send("Game already started...")
+
+@client.command()
+async def place(ctx, pos : int):
+    global turn
+    global player1
+    global player2
+    global board
+    global score
+
+    if not finished:
+        flag = ""
+        if turn == ctx.author:
+            if turn == player1:
+                flag=":regional_indicator_x:"
+            elif turn == player2:
+                flag=":o2:"
+
+            if 0<pos<10 and board[pos-1] == ":white_large_square:":
+                board[pos-1] = flag
+                score+=1
+
+                board_line = ""
+                for x in range(len(board)):  # print board
+                    if x == 2 or x == 5 or x == 8:
+                        board_line += " " + board[x]
+                        await ctx.send(board_line)
+                        board_line = ""
+                    else:
+                        board_line += " " + board[x]
+
+                checkGame(winCondition, flag)
+                if finished:
+                    await ctx.send(flag + " WINS!")
+                elif score > 8:
+                    await ctx.send("Its a tie!")
+
+                #switch turn
+                if turn == player1:
+                    turn = player2
+                elif turn == player2:
+                    turn = player1
+
+            else:
+                await ctx.send("Please choose number between 1 and 9 and unmarked place")
+        else:
+            await ctx.send("It's not your turn")
+    else:
+        await ctx.send("Game is not running. Start it with !tictactoe command")
+
+def checkGame(winCondition, flag):
+    global finished
+    for condition in winCondition:
+        if board[condition[0]] == flag and board[condition[1]] == flag and board[condition[2]] == flag:
+            finished = True
+
+@tictactoe.error
+async def tictactoeERROR(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("Please mention 2 players for this command")
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send("please mention/ping bot")
+
+@place.error
+async def place_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("Please enter correct position")
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send("please enter integer")
 
 client.run('ODI5MzE2MTY2MDMwNzIxMDU1.YG2W3Q.Z8GYet4Qjb-EsvOcrkHN2q1e1-c')
