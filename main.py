@@ -32,11 +32,14 @@ async def on_message(message):
         else:
             await modMailChannel.send("["+message.author.display_name+"] "+message.content)
 
-    elif str(message.channel) == "mod-mail" and message.content.startswith("<"):    #ERROR
+    elif str(message.channel) == "mod-mail" and message.content.startswith("<"):
         obj = message.mentions[0]
         if message.attachments != msgTable:
             files = message.attachments
-            await obj.send("["+message.author.display_name+"]")     #ERROR
+            try:
+                await obj.send("["+message.author.display_name+"]")
+            except:
+                pass
 
             for f in files:
                 await obj.send(f.url)
@@ -44,7 +47,10 @@ async def on_message(message):
             index = message.content.index(" ")
             text = message.content
             msg = text[index:]
-            await obj.send("["+message.author.display_name+"] "+msg)
+            try:
+                await obj.send("["+message.author.display_name+"] "+msg)
+            except:
+                pass
 
     await client.process_commands(message)      #for client.commands
 
@@ -61,9 +67,13 @@ async def list(ctx):
         say [arg]\t\t-print arg
         server\t\t\t -check information about server
         list\t\t\t\t   -print commands list
+        kick [player] [reason]
+        ban [player] [reason]
+        unban [player]
         
         music:
         play
+        resume
         pause
         stop
         leave
@@ -97,6 +107,28 @@ async def server(ctx):
     embed.add_field(name="Member Count", value=memberCount, inline=True)
 
     await ctx.send(embed=embed)
+
+@client.command()
+async def kick(ctx, member : discord.Member, *, reason=None):
+    await member.kick(reason=reason)
+    await ctx.send(member.mention + " kicked from server " + reason)
+
+@client.command()
+async def ban(ctx, member : discord.Member, *, reason=None):
+    await member.ban(reason=reason)
+    await ctx.send(member.mention+" banned " + reason)
+
+@client.command()
+async def unban(ctx, *, member):
+    bannedUsers = await ctx.guild.bans()
+    name, discriminator = member.split('#')
+
+    for b in bannedUsers:
+        user = b.user
+        if (name, discriminator) == (user.name, user.discriminator):
+            await ctx.guild.unban(user)
+            await ctx.send(member+" unbanned")
+            return
 
 #MUSIC
 @client.command()
